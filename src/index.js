@@ -4,38 +4,57 @@
  * LICENSE file in the root directory of this source tree.
  */
 
- import { params, convertFilter } from "@activewidgets/options";
+import { params, convertSort, convertFilter } from "@activewidgets/options";
 
- let ops = {
-     '=': '_eq',
-     '>': '_gt',
-     '<': '_lt',
-     '>=': '_gte',
-     '<=': '_lte'
- };
+const operators = {
+
+    /* equality */
+    '=': '_eq',
+    '<>': '_neq',
+    '!=': '_neq',
+
+    /* comparison */
+    '<': '_lt',
+    '>': '_gt',
+    '<=': '_lte',
+    '>=': '_gte',
+
+    /* text */
+    'LIKE': '_like',
+    'ILIKE': '_ilike',
+
+    /* logical */
+    'NOT': '_not',
+    'AND': '_and',
+    'OR': '_or'
+};
+
+const formatting = {
+    equality: (name, operator, value) => ({[name]: {[operator]: value}}),
+    comparison: (name, operator, value) => ({[name]: {[operator]: value}}),
+    text: (name, operator, pattern) => ({[name]: {[operator]: pattern}}),
+    logical: (operator, expression) => ({[operator]: expression})
+};
+
+function nested(name, value){
+    return {[name]: value};
+}
  
- let format = {
-     compare: (path, op, value) => ({
-         [path[0]]: path.length > 1 ? format.compare(path.slice(1), op, value) : {[ops[op]]: value}
-     })
- }
- 
- 
- function convertSort(orderBy){
-     if (orderBy){
-         let [name, dir] = orderBy.split(' ');
-         return {[name]: dir};
-     }
- }
- 
- 
- function convertParams({limit, offset, orderBy, where}){
-     return {
-         limit,
-         offset,
-         where: convertFilter(where, format),
-         order_by: convertSort(orderBy)
-     };
+function sortExpr(name, direction){
+    return {[name]: direction};
+}
+
+function mergeAll(items){
+    return items.length === 1 ? items[0] : items;
+}
+
+function convertParams({where, orderBy, limit, offset}){
+    return {
+        where: convertFilter(where, operators, formatting, nested),
+        order_by: convertSort(orderBy, sortExpr, mergeAll, nested),
+        limit,
+        offset
+    };
  }
  
  
